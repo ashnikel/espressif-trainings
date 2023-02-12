@@ -1,0 +1,25 @@
+[package]
+name = "hello-world"
+version = "0.1.0"
+authors = ["Victor Medvedik <ashnikel@gmail.com>"]
+edition = "2021"
+resolver = "2"
+
+[profile.release]
+opt-level = "s"
+
+[profile.dev]
+debug = true # Symbols are nice and they don't increase the size on Flash
+opt-level = "z"
+
+[features]
+pio = ["esp-idf-sys/pio"]
+default = ["native"]
+native = ["esp-idf-sys/native"]
+
+[dependencies]
+esp-idf-sys = { version = "0.31.11", features = ["binstart"] }
+ignore = "=0.4.11"
+
+[build-dependencies]
+embuild = "0.30.4"
