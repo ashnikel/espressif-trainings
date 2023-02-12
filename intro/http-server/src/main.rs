@@ -8,10 +8,10 @@ use std::{
 use bsc::{temp_sensor::BoardTempSensor, wifi::wifi};
 use embedded_svc::{
     http::{
-        server::{registry::Registry, Response},
+        server::{registry::Registry, Response, ResponseWrite},
         Method,
     },
-    io::Write,
+    io::Write
 };
 use esp32_c3_dkc02_bsc as bsc;
 use esp_idf_svc::http::server::{Configuration, EspHttpServer};
@@ -30,23 +30,33 @@ fn main() -> anyhow::Result<()> {
 
     let _wifi = wifi(CONFIG.wifi_ssid, CONFIG.wifi_psk)?;
 
-    let mut temp_sensor = BoardTempSensor::new_taking_peripherals();
-
     // TODO your code here:
-    // let server_config = ...;
-    // let mut server = EspHttpServer::new(...)?;
+    let server_config = Configuration::default();
+    let mut server = EspHttpServer::new(&server_config)?;
 
-    // server.set_inline_handler("/", Method::Get, |request, response| {
-    // TODO your code here:
-    // ...
-    //})?;
+    server.set_inline_handler("/", Method::Get, |request, response| {
+        let mut writer = response.into_writer(request)?;
+        let message = index_html();
+        writer.do_write_all(&message.into_bytes())?;
+        writer.complete()
+    })?;
+
+    let temp_sensor_main = Arc::new(Mutex::new(BoardTempSensor::new_taking_peripherals()));
+    let temp_sensor = temp_sensor_main.clone();
+    server.set_inline_handler("/temperature", Method::Get, move |request, response| {
+        let mut writer = response.into_writer(request)?;
+        let temp_val = temp_sensor.lock().unwrap().read_owning_peripherals();
+        let message = temperature(temp_val);
+        writer.do_write_all(&message.into_bytes())?;
+        writer.complete()
+    })?;
 
     // TODO this is not true until you actually create one
     println!("server awaiting connection");
 
     // prevent program from exiting
     loop {
-        let current_temperature = temp_sensor.read_owning_peripherals();
+        let current_temperature = temp_sensor_main.lock().unwrap().read_owning_peripherals();
         println!("board temperature: {:.2}", current_temperature);
         sleep(Duration::from_millis(1000));
     }
