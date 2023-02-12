@@ -23,6 +23,7 @@ esp32-c3-dkc02-bsc = { path = "../../common/lib/esp32-c3-dkc02-bsc" }
 log = "0.4"
 anyhow = "1"
 toml-cfg = "0.1"
+ignore = "=0.4.11"
 
 [build-dependencies]
 embuild = "0.28"
