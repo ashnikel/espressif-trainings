@@ -20,7 +20,9 @@ use esp_idf_sys as _;
 use log::{error, info};
 
 // imported message topics
-use mqtt_messages::{cmd_topic_fragment, hello_topic, Command, RawCommandData};
+use mqtt_messages::{
+    cmd_topic_fragment, hello_topic, temperature_data_topic, Command, RawCommandData,
+};
 
 const UUID: &'static str = get_uuid::uuid();
 
@@ -39,8 +41,7 @@ pub struct Config {
 }
 
 fn main() -> anyhow::Result<()> {
-
-    // Setup 
+    // Setup
     esp_idf_sys::link_patches();
 
     EspLogger::initialize_default();
@@ -72,16 +73,23 @@ fn main() -> anyhow::Result<()> {
     // Your Code:
 
     // 1. Create a client with default configuration and empty handler
-    // let mut client = EspMqttClient::new( ... )?;
+    let mut client = EspMqttClient::new(broker_url, &mqtt_config, move |message_event| {})?;
 
     // 2. publish an empty hello message
-
+    let payload: &[u8] = &[];
+    client.publish(hello_topic(UUID), QoS::AtLeastOnce, false, payload)?;
 
     loop {
         sleep(Duration::from_secs(1));
         let temp = temp_sensor.read_owning_peripherals();
 
         // 3. publish CPU temperature
-        // client.publish( ... )?;
+        let temperature_data: &[u8] = &temp.to_be_bytes();
+        client.publish(
+            temperature_data_topic(UUID),
+            QoS::AtLeastOnce,
+            false,
+            temperature_data,
+        )?;
     }
 }
